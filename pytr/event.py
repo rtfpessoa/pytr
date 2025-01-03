@@ -189,10 +189,12 @@ class Event:
         return_vals = {}
         sections = event_dict.get("details", {}).get("sections", [{}])
         for section in sections:
-            if section.get("title") == "Transaktion":
+            if section.get("title") in ["Transaktion", "Transaction"]:
                 data = section["data"]
-                shares_dicts = list(filter(lambda x: x["title"] in ["Aktien", "Anteile"], data))
-                fees_dicts = list(filter(lambda x: x["title"] == "Gebühr", data))
+                shares_dicts = list(
+                    filter(lambda x: x["title"] in ["Aktien", "Anteile", "Shares"], data)
+                )
+                fees_dicts = list(filter(lambda x: x["title"] in ["Gebühr", "Fee"], data))
                 titles = ["shares"] * len(shares_dicts) + ["fees"] * len(fees_dicts)
                 for key, elem_dict in zip(titles, shares_dicts + fees_dicts):
                     return_vals[key] = cls._parse_float_from_detail(elem_dict)

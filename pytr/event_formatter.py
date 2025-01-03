@@ -61,9 +61,7 @@ class EventCsvFormatter:
                 event.value, locale=self.lang, decimal_quantization=True
             )
         kwargs["note"] = (
-            self.translate(event.note) + " - " + event.title
-            if event.note is not None
-            else event.title
+            " - ".join([s for s in [self.translate(event.note) if event.note is not None else None, event.title, event.subtitle] if s is not None])
         )
         if event.isin is not None:
             kwargs["isin"] = event.isin

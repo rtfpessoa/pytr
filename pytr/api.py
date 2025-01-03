@@ -88,7 +88,7 @@ class TradeRepublicApi:
         phone_no=None,
         pin=None,
         keyfile=None,
-        locale="de",
+        locale="en",
         save_cookies=False,
         credentials_file=None,
         cookies_file=None,

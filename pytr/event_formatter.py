@@ -67,8 +67,12 @@ class EventCsvFormatter:
         if isinstance(event.event_type, PPEventType):
             kwargs["type"] = self.translate(event.event_type.value)
         if event.value is not None:
-            kwargs["value"] = format_decimal(event.value, locale=self.lang, decimal_quantization=True)
-        kwargs["note"] = self.translate(event.note) + " - " + event.title if event.note is not None else event.title
+            kwargs["value"] = format_decimal(
+                event.value, locale=self.lang, decimal_quantization=True
+            )
+        kwargs["note"] = (
+            " - ".join([s for s in [self.translate(event.note) if event.note is not None else None, event.title, event.subtitle] if s is not None])
+        )
         if event.isin is not None:
             kwargs["isin"] = event.isin
         if event.shares is not None:

@@ -48,6 +48,8 @@ tr_event_type_mapping = {
     "card_refund": PPEventType.DEPOSIT,
     "card_successful_oct": PPEventType.DEPOSIT,
     "card_tr_refund": PPEventType.DEPOSIT,
+    # Buy/Sell
+    "SHAREBOOKING_TRANSACTIONAL": PPEventType.SELL,
     # Dividends
     "CREDIT": PPEventType.DIVIDEND,
     "ssp_corporate_action_invoice_cash": PPEventType.DIVIDEND,

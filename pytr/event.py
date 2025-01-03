@@ -135,11 +135,9 @@ class Event:
         isin, shares, taxes, note, fees = (None,) * 5
 
         if event_type is PPEventType.DIVIDEND:
-            isin = cls._parse_isin(event_dict)
             taxes = cls._parse_taxes(event_dict)
 
         elif isinstance(event_type, ConditionalEventType):
-            isin = cls._parse_isin(event_dict)
             shares, fees = cls._parse_shares_and_fees(event_dict)
             taxes = cls._parse_taxes(event_dict)
 
@@ -149,6 +147,8 @@ class Event:
         elif event_type in [PPEventType.DEPOSIT, PPEventType.REMOVAL]:
             shares, fees = cls._parse_shares_and_fees(event_dict)
             note = cls._parse_card_note(event_dict)
+
+        isin = cls._parse_isin(event_dict)
 
         return fees, isin, note, shares, taxes
 
@@ -163,18 +163,59 @@ class Event:
             str: isin
         """
         sections = event_dict.get("details", {}).get("sections", [{}])
-        isin = event_dict.get("icon", "")
-        isin = isin[isin.find("/") + 1 :]
-        isin = isin[: isin.find("/")]
-        isin2 = isin
+
         for section in sections:
             action = section.get("action", None)
             if action and action.get("type", {}) == "instrumentDetail":
-                isin2 = section.get("action", {}).get("payload")
-                break
-        if isin != isin2:
-            isin = isin2
-        return isin
+                return section.get("action", {}).get("payload")
+
+        sections = event_dict.get("details", {}).get("sections", [{}])
+        isin = event_dict.get("icon", "")
+        isin = isin[isin.find("/") + 1 :]
+        isin = isin[: isin.find("/")]
+
+        return isin if Event._valid_isin(isin) else None
+
+    @staticmethod
+    def _valid_isin(isin) -> bool:
+        """
+        Validates an International Securities Identification Number (ISIN).
+
+        Args:
+            isin (str): The ISIN to validate.
+
+        Returns:
+            bool: True if the ISIN is valid, False otherwise.
+        """
+        # Check if ISIN length is 12 characters and consists of alphanumeric characters
+        if len(isin) != 12 or not isin.isalnum():
+            return False
+
+        # Convert letters to numbers (A=10, B=11, ..., Z=35)
+        def char_to_number(c):
+            if c.isdigit():
+                return int(c)
+            return ord(c.upper()) - 55
+
+        # Expand the ISIN by replacing letters with their numeric equivalents
+        expanded_isin = ''.join(str(char_to_number(char)) for char in isin[:-1])
+
+        # Perform the Luhn algorithm on the expanded ISIN
+        def luhn_checksum(digits):
+            total = 0
+            reverse_digits = digits[::-1]
+            for i, digit in enumerate(reverse_digits):
+                n = int(digit)
+                if i % 2 == 0:  # Double every second digit from the right
+                    n *= 2
+                    if n > 9:  # Subtract 9 from numbers over 9
+                        n -= 9
+                total += n
+            return total % 10
+
+        # Add the checksum digit back to the expanded ISIN for validation
+        checksum = char_to_number(isin[-1])
+        return luhn_checksum(expanded_isin + str(checksum)) == 0
 
     @classmethod
     def _parse_shares_and_fees(cls, event_dict: Dict[Any, Any]) -> Tuple[Optional[float], Optional[float]]:

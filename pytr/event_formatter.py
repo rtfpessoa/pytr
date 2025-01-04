@@ -84,7 +84,7 @@ class EventCsvFormatter:
         lines = self.csv_fmt.format(**kwargs)
 
         # Generate BUY and DEPOSIT events from SAVEBACK event
-        if event.event_type == ConditionalEventType.SAVEBACK:
+        if event.event_type in [ConditionalEventType.SAVEBACK, ConditionalEventType.STOCK_PERK_REFUNDED]:
             assert event.value is not None, event
             kwargs["type"] = self.translate(PPEventType.BUY.value)
             lines = self.csv_fmt.format(**kwargs)

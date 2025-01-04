@@ -16,6 +16,7 @@ class ConditionalEventType(EventType):
 
     SAVEBACK = auto()
     TRADE_INVOICE = auto()
+    STOCK_PERK_REFUNDED = auto()
 
 
 class PPEventType(EventType):
@@ -49,6 +50,7 @@ tr_event_type_mapping = {
     "card_successful_oct": PPEventType.DEPOSIT,
     "card_tr_refund": PPEventType.DEPOSIT,
     # Buy/Sell
+    "STOCK_PERK_REFUNDED": ConditionalEventType.STOCK_PERK_REFUNDED,
     "SHAREBOOKING_TRANSACTIONAL": PPEventType.SELL,
     # Dividends
     "CREDIT": PPEventType.DIVIDEND,
@@ -112,6 +114,8 @@ class Event:
             and v != 0.0
             else None
         )
+        if event_type == ConditionalEventType.STOCK_PERK_REFUNDED:
+            value = cls._parse_perk_value(event_dict)
         isin = cls._parse_isin(event_dict)
         shares, fees = cls._parse_shares_and_fees(event_dict)
         taxes = cls._parse_taxes(event_dict)
@@ -151,44 +155,7 @@ class Event:
 
     @staticmethod
     def _valid_isin(isin) -> bool:
-        """
-        Validates an International Securities Identification Number (ISIN).
-
-        Args:
-            isin (str): The ISIN to validate.
-
-        Returns:
-            bool: True if the ISIN is valid, False otherwise.
-        """
-        # Check if ISIN length is 12 characters and consists of alphanumeric characters
-        if len(isin) != 12 or not isin.isalnum():
-            return False
-
-        # Convert letters to numbers (A=10, B=11, ..., Z=35)
-        def char_to_number(c):
-            if c.isdigit():
-                return int(c)
-            return ord(c.upper()) - 55
-
-        # Expand the ISIN by replacing letters with their numeric equivalents
-        expanded_isin = ''.join(str(char_to_number(char)) for char in isin[:-1])
-
-        # Perform the Luhn algorithm on the expanded ISIN
-        def luhn_checksum(digits):
-            total = 0
-            reverse_digits = digits[::-1]
-            for i, digit in enumerate(reverse_digits):
-                n = int(digit)
-                if i % 2 == 0:  # Double every second digit from the right
-                    n *= 2
-                    if n > 9:  # Subtract 9 from numbers over 9
-                        n -= 9
-                total += n
-            return total % 10
-
-        # Add the checksum digit back to the expanded ISIN for validation
-        checksum = char_to_number(isin[-1])
-        return luhn_checksum(expanded_isin + str(checksum)) == 0
+        return len(isin) == 12 and isin.isalnum() and isin[0].isupper() and isin[1].isupper()
 
     @classmethod
     def _parse_shares_and_fees(cls, event_dict: Dict[Any, Any]) -> Tuple[Optional[float], Optional[float]]:
@@ -213,6 +180,33 @@ class Event:
                 for key, elem_dict in zip(titles, shares_dicts + fees_dicts):
                     return_vals[key] = cls._parse_float_from_detail(elem_dict)
         return return_vals.get("shares"), return_vals.get("fees")
+
+    @classmethod
+    def _parse_perk_value(
+        cls, event_dict: Dict[Any, Any]
+    ) -> Optional[float]:
+        """Parses the perk amount
+
+        Args:
+            event_dict (Dict[Any, Any]): _description_
+
+        Returns:
+            Optional[float]: value
+        """
+        return_vals = {}
+        sections = event_dict.get("details", {}).get("sections", [{}])
+        for section in sections:
+            if section.get("title") in ["Transaktion", "Transaction"]:
+                data = section["data"]
+                total_dicts = list(
+                    filter(lambda x: x["title"] in ["Gesamt", "Total"], data)
+                )
+                titles = ["total"] * len(total_dicts)
+                for key, elem_dict in zip(
+                    titles, total_dicts
+                ):
+                    return_vals[key] = cls._parse_float_from_detail(elem_dict)
+        return return_vals.get("total")
 
     @classmethod
     def _parse_taxes(cls, event_dict: Dict[Any, Any]) -> Optional[float]:

@@ -110,9 +110,10 @@ class Event:
             and v != 0.0
             else None
         )
-        fees, isin, note, shares, taxes = cls._parse_type_dependent_params(
-            event_type, event_dict
-        )
+        isin = cls._parse_isin(event_dict)
+        shares, fees = cls._parse_shares_and_fees(event_dict)
+        taxes = cls._parse_taxes(event_dict)
+        note = cls._parse_card_note(event_dict)
         return cls(date, title, subtitle, event_type, fees, isin, note, shares, taxes, value)
 
     @staticmethod
@@ -123,38 +124,6 @@ class Event:
         if event_dict.get("status", "").lower() == "canceled":
             event_type = None
         return event_type
-
-    @classmethod
-    def _parse_type_dependent_params(
-        cls, event_type: EventType, event_dict: Dict[Any, Any]
-    ) -> Tuple[Optional[Union[str, float]]]:
-        """Parses the fees, isin, note, shares and taxes fields
-
-        Args:
-            event_type (EventType): _description_
-            event_dict (Dict[Any, Any]): _description_
-
-        Returns:
-            Tuple[Optional[Union[str, float]]]]: fees, isin, note, shares, taxes
-        """
-        isin, shares, taxes, note, fees = (None,) * 5
-
-        if event_type is PPEventType.DIVIDEND:
-            taxes = cls._parse_taxes(event_dict)
-
-        elif isinstance(event_type, ConditionalEventType):
-            shares, fees = cls._parse_shares_and_fees(event_dict)
-            taxes = cls._parse_taxes(event_dict)
-
-        elif event_type is PPEventType.INTEREST:
-            taxes = cls._parse_taxes(event_dict)
-
-        elif event_type in [PPEventType.DEPOSIT, PPEventType.REMOVAL]:
-            note = cls._parse_card_note(event_dict)
-
-        isin = cls._parse_isin(event_dict)
-
-        return fees, isin, note, shares, taxes
 
     @staticmethod
     def _parse_isin(event_dict: Dict[Any, Any]) -> str:
@@ -239,7 +208,7 @@ class Event:
             if section.get("title") in ["Transaktion", "Transaction"]:
                 data = section["data"]
                 shares_dicts = list(
-                    filter(lambda x: x["title"] in ["Aktien", "Anteile", "Shares"], data)
+                    filter(lambda x: x["title"] in ["Aktien", "Anteile", "Shares", "Debited Shares"], data)
                 )
                 fees_dicts = list(filter(lambda x: x["title"] in ["Gebühr", "Fee"], data))
                 titles = ["shares"] * len(shares_dicts) + ["fees"] * len(fees_dicts)
@@ -260,12 +229,12 @@ class Event:
             Optional[float]: taxes
         """
         # taxes keywords
-        taxes_keys = {"Steuer", "Steuern"}
+        taxes_keys = {"Steuer", "Steuern", "Tax", "Taxes"}
         # Gather all section dicts
         sections = event_dict.get("details", {}).get("sections", [{}])
         # Gather all dicts pertaining to transactions
         transaction_dicts = filter(
-            lambda x: x["title"] in {"Transaktion", "Geschäft"}, sections
+            lambda x: "title" in x and x["title"] in {"Transaktion", "Geschäft", "Transaction"}, sections
         )
         for transaction_dict in transaction_dicts:
             # Filter for taxes dicts

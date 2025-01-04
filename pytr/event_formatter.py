@@ -70,6 +70,10 @@ class EventCsvFormatter:
             kwargs["value"] = format_decimal(
                 event.value, locale=self.lang, decimal_quantization=True
             )
+        elif event.event_type == PPEventType.SELL:
+            kwargs["value"] = format_decimal(
+                0, locale=self.lang, decimal_quantization=True
+            )
         kwargs["note"] = (
             " - ".join([s for s in [self.translate(event.note) if event.note is not None else None, event.title, event.subtitle] if s is not None])
         )

@@ -50,6 +50,7 @@ tr_event_type_mapping = {
     # Buy/Sell
     "STOCK_PERK_REFUNDED": ConditionalEventType.STOCK_PERK_REFUNDED,
     "SHAREBOOKING_TRANSACTIONAL": PPEventType.SELL,
+    "SHAREBOOKING": PPEventType.SELL,
     # Dividends
     "CREDIT": PPEventType.DIVIDEND,
     "ssp_corporate_action_invoice_cash": PPEventType.DIVIDEND,

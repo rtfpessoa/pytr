@@ -50,6 +50,7 @@ tr_event_type_mapping = {
     "card_successful_oct": PPEventType.DEPOSIT,
     "card_tr_refund": PPEventType.DEPOSIT,
     # Buy/Sell
+    "trading_savingsplan_executed": PPEventType.BUY,
     "STOCK_PERK_REFUNDED": ConditionalEventType.STOCK_PERK_REFUNDED,
     "SHAREBOOKING_TRANSACTIONAL": PPEventType.SELL,
     "SHAREBOOKING": PPEventType.SELL,

@@ -122,11 +122,14 @@ class TransactionExporter:
             assert event.value is not None, event
             event.event_type = PPEventType.BUY if event.value < 0 else PPEventType.SELL
 
+        if event.event_type == PPEventType.SELL and not event.value:
+            event.value = self._decimal_format(0, quantization=True)
+
         kwargs: _SimpleTransaction = {
             "date": event.date.isoformat() if self.date_with_time else event.date.date().isoformat(),
             "type": self._translate(event.event_type.value) if isinstance(event.event_type, PPEventType) else None,
-            "value": self._decimal_format(event.value),
-            "note": self._translate(event.note) + " - " + event.title if event.note is not None else event.title,
+            "value": self._decimal_format(event.value, quantization=True),
+            "note": " - ".join([s for s in [self._translate(event.note) if event.note is not None else None, event.title, event.subtitle] if s is not None]),
             "isin": event.isin,
             "shares": self._decimal_format(event.shares, False),
             "fees": self._decimal_format(-event.fees) if event.fees is not None else None,
@@ -136,7 +139,7 @@ class TransactionExporter:
         # Special case for saveback events. Example payload: https://github.com/pytr-org/pytr/issues/116#issuecomment-2377491990
         # With saveback, a small amount already invested into a savings plans is invested again, effectively representing
         # a deposit (you get money from Trade Republic) and then a buy of the related asset.
-        if event.event_type == ConditionalEventType.SAVEBACK:
+        if event.event_type in [ConditionalEventType.SAVEBACK, ConditionalEventType.STOCK_PERK_REFUNDED]:
             assert event.value is not None, event
             kwargs["type"] = self._translate(PPEventType.BUY.value)
             yield self._localize_keys(kwargs)
